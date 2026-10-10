@@ -1,6 +1,7 @@
 import copy
 import datetime as dt
 import json
+import sys
 from pathlib import Path
 import tempfile
 import types
@@ -11,7 +12,8 @@ from unittest.mock import patch
 from backends import PosixBackend, make_backend, split_nmcli
 from engine import BehaviorModel, assess
 from privacy import public_report
-from tools.release_guard import PUBLIC_REPOSITORY, scan_bytes, manifest, audit_source, audit_archive
+from tools.release_guard import PUBLIC_REPOSITORY, scan_bytes, manifest, audit_source, audit_archive, audit_executable
+from tools.build import python_runtime_license
 from tools.prepare_source import prepare
 
 
@@ -83,6 +85,33 @@ class BackendTests(unittest.TestCase):
 
 
 class PrivacyTests(unittest.TestCase):
+    def test_native_auditor_inspects_raw_code_without_deserialization(self):
+        reader_module = types.ModuleType('PyInstaller.archive.readers')
+        calls = []
+        class Embedded:
+            toc = {'fictional_module': ()}
+            def extract(self, name, raw=False):
+                calls.append((name, raw))
+                if not raw: raise AssertionError('Foreign Python code must not be deserialized')
+                return b'FICTIONAL-PRIVATE-CANARY-111'
+        class Archive:
+            def __init__(self, path): self.toc = {'PYZ.pyz': ('z',)}
+            def open_embedded_archive(self, name): return Embedded()
+        reader_module.CArchiveReader = Archive
+        with tempfile.TemporaryDirectory() as directory:
+            binary = Path(directory) / 'fictional.bin'; binary.write_bytes(b'fake archive')
+            with patch.dict(sys.modules, {'PyInstaller.archive.readers': reader_module}):
+                findings = audit_executable(binary, ['FICTIONAL-PRIVATE-CANARY-111'])
+        self.assertEqual(calls, [('fictional_module', True)])
+        self.assertTrue(any(item['reason'] == 'local-private-identifier' for item in findings))
+
+    def test_runtime_license_fallback_is_version_specific(self):
+        staging = Path('fictional-source')
+        fallback = staging / 'licenses' / 'Python-3.13-LICENSE.txt'
+        with patch.object(Path, 'is_file', lambda path: path == fallback):
+            self.assertEqual(python_runtime_license(staging, 'fictional-python', (3, 13)), fallback)
+            self.assertIsNone(python_runtime_license(staging, 'fictional-python', (3, 14)))
+
     def test_authorized_repository_url_does_not_disclose_local_identity(self):
         overlapping_seed = PUBLIC_REPOSITORY.split('/')[3][:5]
         for encoding in ('utf-8', 'utf-16-le'):

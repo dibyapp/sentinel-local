@@ -17,6 +17,18 @@ from tools.release_guard import audit_source, audit_executable, local_seeds, man
 from version import __version__
 
 
+def python_runtime_license(staging, prefix=None, version=None):
+    prefix = Path(sys.base_prefix if prefix is None else prefix)
+    version = sys.version_info[:2] if version is None else version
+    candidates = [prefix / 'LICENSE.txt', prefix / 'LICENSE',
+                  Path('/usr/share/doc') / f'python{version[0]}.{version[1]}' / 'copyright']
+    # setup-python's Linux runtime may omit LICENSE. Use an official,
+    # version-specific fallback, without fetching license text during builds.
+    if tuple(version) == (3, 13):
+        candidates.append(staging / 'licenses' / 'Python-3.13-LICENSE.txt')
+    return next((path for path in candidates if path.is_file()), None)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--output-dir', type=Path, default=ROOT / 'dist')
@@ -48,7 +60,7 @@ def main():
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / relative, target)
         notices = staging / 'licenses'
-        notices.mkdir()
+        notices.mkdir(exist_ok=True)
         shutil.copyfile(staging / 'LICENSE', notices / 'Sentinel-MIT.txt')
         for package in ('psutil', 'PyInstaller'):
             distribution = importlib.metadata.distribution(package)
@@ -57,9 +69,7 @@ def main():
                 raise SystemExit('A required dependency license is missing; build stopped.')
             for index, entry in enumerate(candidates):
                 shutil.copyfile(distribution.locate_file(entry), notices / f'{package}-{index}-license.txt')
-        python_candidates = [Path(sys.base_prefix) / 'LICENSE.txt', Path(sys.base_prefix) / 'LICENSE',
-                             Path('/usr/share/doc') / f'python{sys.version_info.major}.{sys.version_info.minor}' / 'copyright']
-        python_license = next((p for p in python_candidates if p.is_file()), None)
+        python_license = python_runtime_license(staging)
         if not python_license:
             raise SystemExit('Python runtime license was not found; build stopped before packaging.')
         shutil.copyfile(python_license, notices / 'Python-runtime-license.txt')

@@ -7,6 +7,7 @@
 - Add keyword/search-intent research, five practical guides, workflow diagrams, and a 30-day organic discovery plan.
 - Use clearer advisory wording for the connection-count rule and document its 20-connection threshold and false-positive limits.
 - Run read-only source validation on pushes and pull requests; retain manual native builds and explicit release publishing.
+- Keep an official version-specific Python license fallback for hosted builders; inspect decompressed packaged code without cross-version deserialization.
 
 ## 0.5.0 — extensible product beta, unpublished
 

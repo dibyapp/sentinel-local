@@ -3,13 +3,11 @@ import argparse
 import io
 import ipaddress
 import json
-import marshal
 import os
 from pathlib import Path, PurePosixPath
 import re
 import socket
 import sys
-import types
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -178,9 +176,11 @@ def audit_executable(path, seeds=()):
             for module in embedded.toc:
                 # raw marshalled code preserves constants, strings and nested
                 # co_filename paths after decompression; never execute code.
-                code = embedded.extract(module)
-                if code is not None:
-                    findings.extend(scan_bytes(marshal.dumps(code), f'python:{module}', seeds))
+                payload = embedded.extract(module, raw=True)
+                if payload is not None:
+                    # Inspect decompressed bytes directly. Deserializing code
+                    # from a different Python version can crash the auditor.
+                    findings.extend(scan_bytes(payload, f'python:{module}', seeds))
         elif kind not in ('o', 'd'):
             payload = archive.extract(name)
             vendor_python = name.startswith('libpython') or name.startswith('python') and name.endswith('.dll')

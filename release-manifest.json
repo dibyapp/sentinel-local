@@ -44,6 +44,7 @@
     "docs/screenshots/wifi.jpg",
     "engine.py",
     "guidance.py",
+    "licenses/Python-3.13-LICENSE.txt",
     "portable_main.py",
     "privacy.py",
     "release-manifest.json",

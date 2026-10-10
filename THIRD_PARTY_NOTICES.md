@@ -12,6 +12,8 @@ Sentinel Local's own source is MIT-licensed. Native binaries contain separately 
 
 The native builder includes the installed Python, psutil, and PyInstaller license texts inside a `licenses/` resource directory and writes a companion notices file. Python distributions may include notices for bundled support libraries such as OpenSSL, libffi, zlib, and others; retain them. For Linux distro-supplied runtime libraries, retain the distribution's copyright/license notices and review the final bundle before public distribution.
 
+For Python 3.13 installations that omit a runtime license, the builder can use the checked-in [official CPython 3.13 license](https://github.com/python/cpython/blob/3.13/LICENSE), preserved in `licenses/Python-3.13-LICENSE.txt`. It refuses this fallback for other Python versions.
+
 Defender is supplied by Windows and is not distributed by this project. ClamAV and its signature databases are external prerequisites and are not bundled. The dashboard ships no third-party CDN assets, fonts, analytics SDK, or cloud model.
 
 Before publishing signed binaries, audit the final runtime-library inventory on each native builder and include any additional notices required by that inventory. This build-time inventory and license review is part of the release gate.
