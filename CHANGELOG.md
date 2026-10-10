@@ -8,6 +8,7 @@
 - Use clearer advisory wording for the connection-count rule and document its 20-connection threshold and false-positive limits.
 - Run read-only source validation on pushes and pull requests; retain manual native builds and explicit release publishing.
 - Keep an official version-specific Python license fallback for hosted builders; inspect decompressed packaged code without cross-version deserialization.
+- Exclude CPython compiler configuration containing vendor build-machine paths from POSIX native packages; retain the strict artifact privacy gate.
 
 ## 0.5.0 — extensible product beta, unpublished
 

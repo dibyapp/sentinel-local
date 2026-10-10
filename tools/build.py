@@ -82,6 +82,14 @@ def main():
                    '--hidden-import', 'psutil', '--hidden-import', 'selftest', 'app.py']
         if system != 'windows':
             command.append('--strip')
+            # CPython's compiler configuration contains vendor build-machine
+            # paths. This application does not expose compiler/build APIs;
+            # exclude that metadata rather than relaxing the privacy gate.
+            import sysconfig
+            metadata_module = sysconfig._get_sysconfigdata_name()
+            if not metadata_module.startswith('_sysconfigdata') or any(c not in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-' for c in metadata_module):
+                raise SystemExit('Unexpected Python compiler metadata module; build stopped.')
+            command += ['--exclude-module', metadata_module]
         else:
             command += ['--hide-console', 'hide-early']
         result = subprocess.run(command, cwd=staging, capture_output=True, text=True, errors='replace', creationflags=hidden)
