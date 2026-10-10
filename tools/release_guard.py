@@ -122,7 +122,10 @@ def scan_bytes(payload, label, seeds, patterns=True, vendor_examples=False):
             # above, even when they coincide with an example.
             if reason == 'personal-home-path' and vendor_examples:
                 vendor_path = b'c:' + b'/users/' + b'barney'
-                matches = [m for m in matches if m.group().replace(b'\\', b'/').lower() != vendor_path]
+                vendor_compiler = b'/Users/' + b'runner/work/python-versions/python-versions/'
+                matches = [m for m in matches
+                           if m.group().replace(b'\\', b'/').lower() != vendor_path
+                           and not payload[m.start():].startswith(vendor_compiler)]
             if matches:
                 findings.append({'file': label, 'reason': reason})
     return findings
@@ -184,7 +187,9 @@ def audit_executable(path, seeds=()):
         elif kind not in ('o', 'd'):
             payload = archive.extract(name)
             vendor_python = name.startswith('libpython') or name.startswith('python') and name.endswith('.dll')
-            findings.extend(scan_bytes(payload, f'bundle:{name}', seeds, vendor_examples=vendor_python))
+            vendor_framework = name.startswith('Python.framework/Versions/') and PurePosixPath(name).name == 'Python'
+            vendor_extension = re.fullmatch(r'python3\.\d+/lib-dynload/[A-Za-z0-9_]+\.cpython-\d+-darwin\.so', name) is not None
+            findings.extend(scan_bytes(payload, f'bundle:{name}', seeds, vendor_examples=vendor_python or vendor_framework or vendor_extension))
             if name.endswith('.zip') and zipfile.is_zipfile(io.BytesIO(payload)):
                 with zipfile.ZipFile(io.BytesIO(payload)) as library:
                     for member in library.namelist():
