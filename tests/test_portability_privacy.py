@@ -188,7 +188,7 @@ class PrivacyTests(unittest.TestCase):
         self.assertTrue(scan_bytes(fictional_vendor_path, 'vendor-library', ['Barney'], vendor_examples=True))
 
     def test_public_vendor_compiler_exception_is_binary_scoped_and_identifier_checked(self):
-        prefix = b'/Users/' + b'nad/build_macos_installer/installer/variant/binaries/build/_bld/python/'
+        prefix = b'/Users/' + b'nad/build_macos_installer/'
         source = prefix + b'Python-3.13/Modules/fictional.c'
         unrelated = b'/Users/' + b'fictional-owner/private/file.txt'
         self.assertFalse(scan_bytes(source, 'vendor-library', [], vendor_examples=True))

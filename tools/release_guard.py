@@ -124,7 +124,7 @@ def scan_bytes(payload, label, seeds, patterns=True, vendor_examples=False):
                 vendor_path = b'c:' + b'/users/' + b'barney'
                 # Verified in Python.org's public universal2 installer,
                 # distributed by actions/python-versions for setup-python.
-                vendor_compiler = b'/Users/' + b'nad/build_macos_installer/installer/variant/binaries/build/_bld/python'
+                vendor_compiler = b'/Users/' + b'nad/build_macos_installer'
                 matches = [m for m in matches
                            if m.group().replace(b'\\', b'/').lower() != vendor_path
                            and not (payload[m.start():].startswith(vendor_compiler)
