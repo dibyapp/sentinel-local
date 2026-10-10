@@ -1,0 +1,27 @@
+name: Bug report
+description: Report a reproducible problem using fictional data
+body:
+  - type: markdown
+    attributes:
+      value: "Do not attach local state, raw logs, screenshots of your system, tokens, usernames, file paths, Wi-Fi names, or IP/MAC addresses. Use fictional examples and the default redacted diagnostic summary."
+  - type: input
+    id: version
+    attributes:
+      label: Sentinel version and OS family
+      placeholder: "0.5.1 / Windows, Linux, or macOS"
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction using fictional data
+      description: What did you expect, and what happened?
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy check
+      options:
+        - label: I have removed all personal, machine, network, and credential information.
+          required: true
