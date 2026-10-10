@@ -22,8 +22,8 @@ A checksum verifies agreement with a downloaded reference; it does not authentic
 On a compatible glibc-based x64 distribution, download the Linux artifact and checksum, then run in their folder:
 
 ```sh
-sha256sum --check sentinel-local-0.5.1-linux-x64.sha256
-chmod u+x sentinel-local-0.5.1-linux-x64
+sha256sum --check sentinel-local-0.5.1-linux-x64.sha256 &&
+chmod u+x sentinel-local-0.5.1-linux-x64 &&
 ./sentinel-local-0.5.1-linux-x64
 ```
 

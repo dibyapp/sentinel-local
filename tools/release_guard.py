@@ -122,10 +122,14 @@ def scan_bytes(payload, label, seeds, patterns=True, vendor_examples=False):
             # above, even when they coincide with an example.
             if reason == 'personal-home-path' and vendor_examples:
                 vendor_path = b'c:' + b'/users/' + b'barney'
-                vendor_compiler = b'/Users/' + b'runner/work/python-versions/python-versions/'
+                # Verified in Python.org's public universal2 installer,
+                # distributed by actions/python-versions for setup-python.
+                vendor_compiler = b'/Users/' + b'nad/build_macos_installer/installer/variant/binaries/build/_bld/python'
                 matches = [m for m in matches
                            if m.group().replace(b'\\', b'/').lower() != vendor_path
-                           and not payload[m.start():].startswith(vendor_compiler)]
+                           and not (payload[m.start():].startswith(vendor_compiler)
+                                    and payload[m.start()+len(vendor_compiler):m.start()+len(vendor_compiler)+1] in
+                                    (b'', b'/', b'\x00', b' ', b'\n', b'\r', b"'"))]
             if matches:
                 findings.append({'file': label, 'reason': reason})
     return findings

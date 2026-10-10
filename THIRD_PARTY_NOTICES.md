@@ -14,6 +14,8 @@ The native builder includes the installed Python, psutil, and PyInstaller licens
 
 For Python 3.13 installations that omit a runtime license, the builder can use the checked-in [official CPython 3.13 license](https://github.com/python/cpython/blob/3.13/LICENSE), preserved in `licenses/Python-3.13-LICENSE.txt`. It refuses this fallback for other Python versions.
 
+macOS hosted builds use Python.org's prebuilt universal2 runtime through [actions/python-versions](https://github.com/actions/python-versions). That public runtime contains upstream compiler-directory strings. The privacy auditor recognizes only the verified compiler prefix inside CPython runtime/standard-library binaries; local owner identifiers and credentials remain forbidden. Source files have no vendor-path exception.
+
 Defender is supplied by Windows and is not distributed by this project. ClamAV and its signature databases are external prerequisites and are not bundled. The dashboard ships no third-party CDN assets, fonts, analytics SDK, or cloud model.
 
 Before publishing signed binaries, audit the final runtime-library inventory on each native builder and include any additional notices required by that inventory. This build-time inventory and license review is part of the release gate.

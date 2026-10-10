@@ -25,6 +25,6 @@ Ordinary bug reports should contain the version, OS family, synthetic reproducti
 
 The explicitly approved public repository URL is allowed even if its GitHub account name overlaps a local username. That exception applies only to the fixed public URL prefix; credentials, personal paths, and other occurrences remain subject to the gate.
 
-Bundled CPython binaries have narrow exceptions for a known fictional standard-library example and the public hosted CPython compiler directory. Those exceptions never apply to source files or other personal paths. Known owner identifiers and credential patterns are still rejected in every vendor binary.
+Bundled CPython binaries have narrow exceptions for a known fictional standard-library example and a compiler directory verified in Python.org's public macOS installer. Those exceptions never apply to source files or other personal paths. Known owner identifiers and credential patterns are still rejected in every vendor binary.
 
 Automated scanning is a backstop, not an absolute secrecy guarantee. Inspect the exact source archive and staged diff before publishing. Never upload `.local/`, `data/`, machine reports, logs, baseline models, tokens, real screenshots, build logs, or the repository's existing Git configuration/history.
