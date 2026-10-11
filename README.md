@@ -125,10 +125,6 @@ Contributions are especially useful for clearer alerts, false-positive evaluatio
 
 If the project helps you, a star makes it easier to find again. Useful feedback and reproducible contributions help improve it.
 
-## More from the creator
-
-[PCBEditor — AI circuit and PCB design](https://pcbeditor.com/) helps electronics makers design schematics and circuit boards, with KiCad and Gerber exports.
-
 ## Read more
 
 - [Windows Defender dashboard and quick-scan guide](docs/guides/windows-defender-dashboard.md)
