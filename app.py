@@ -29,6 +29,7 @@ from guidance import system_profile, next_steps, assistant_handoff
 from ai_evidence import build_evidence, REASONS
 from ai_providers import run_review, provider_options, PROVIDERS, ProviderError
 from ai_integrations import load_profiles
+from workbench import Workbench, finding_key, fingerprint, freshness, parsed, markdown_report
 
 ROOT = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parent))
 DATA = state_directory()
@@ -156,6 +157,7 @@ class Agent:
         self.stop = threading.Event()
         self.interval = interval
         self.model = BehaviorModel(read_json(data_dir / 'model.json', None))
+        self.workbench = Workbench(read_json(data_dir / 'workbench.json', {}))
         self.state = {'snapshot': None, 'findings': [], 'jobs': [], 'network': read_json(data_dir / 'network.json', None),
                       'history': read_json(data_dir / 'history.json', []), 'monitoring': True,
                       'alertHistory': read_json(data_dir / 'alert-history.json', []),
@@ -175,7 +177,8 @@ class Agent:
             result = copy.deepcopy(self.state)
             result['model'] = {'samples': self.model.state['samples'], 'warmup': 20,
                                'processes': len(self.model.state['processes']), 'ready': self.model.state['samples'] >= 20,
-                               'paused': bool(result['snapshot']) and (result['snapshot'].get('processes') is None or result['snapshot'].get('connections') is None)}
+                               'paused': self.workbench.settings['learningPaused'] or bool(result['snapshot']) and (result['snapshot'].get('processes') is None or result['snapshot'].get('connections') is None),
+                               'manualPause': self.workbench.settings['learningPaused']}
             result['interval'] = self.interval
             result['defenderScans'] = scan_events(result.get('snapshot') or {})
             result['jobs'] = result['jobs'][-20:]
@@ -189,7 +192,9 @@ class Agent:
             if completed:
                 review = completed[-1]
                 finished = timestamp(review.get('finishedAt'))
-                if finished and 0 <= (dt.datetime.now(dt.timezone.utc) - finished.astimezone(dt.timezone.utc)).total_seconds() <= 240:
+                current_review = (not result.get('lastError') and review.get('snapshotFingerprint') == fingerprint(result.get('snapshot'))
+                                  and freshness((result.get('snapshot') or {}).get('collectedAt'), dt.datetime.now(dt.timezone.utc))['status'] == 'fresh')
+                if current_review and finished and 0 <= (dt.datetime.now(dt.timezone.utc) - finished.astimezone(dt.timezone.utc)).total_seconds() <= 240:
                     for finding in rows((review.get('result') or {}).get('result', {}).get('findings')):
                         reason = finding.get('reason_code')
                         if reason not in REASONS:
@@ -202,7 +207,84 @@ class Agent:
             result['system'] = copy.deepcopy(self.system)
             result['guide'] = next_steps(result, result['capabilities'])
             result['directAiReview'] = True
+            now = dt.datetime.now(dt.timezone.utc)
+            for finding in result['findings']:
+                finding['reviewKey'] = finding_key(finding)
+            for review in result['aiReviews']:
+                review['evidenceCurrent'] = (review.get('status') == 'completed' and not result.get('lastError')
+                    and review.get('snapshotFingerprint') == fingerprint(result.get('snapshot'))
+                    and freshness((result.get('snapshot') or {}).get('collectedAt'), now)['status'] == 'fresh')
+            result['workbench'] = self.workbench.view(result.get('snapshot'), result['findings'], now, bool(result.get('lastError')))
+            result['workbench']['modelBackupAvailable'] = (self.data_dir / 'model-backup.json').is_file()
             return result
+
+    def control(self, request):
+        """Strict local controls. Never dispatch an engine, provider or system setting."""
+        action = request.get('action')
+        schemas = {'learning': {'action', 'paused'}, 'retention': {'action', 'days'},
+                   'finding': {'action', 'key', 'status'}, 'reminder': {'action', 'days'},
+                   'reminder-done': {'action'}, 'baseline-reset': {'action', 'confirmed'},
+                   'baseline-restore': {'action', 'confirmed'}}
+        if not isinstance(action, str) or action not in schemas or set(request) != schemas[action]:
+            raise ValueError('Invalid local control fields.')
+        with self.lock:
+            now = dt.datetime.now(dt.timezone.utc)
+            if action == 'learning':
+                if type(request['paused']) is not bool:
+                    raise ValueError('Learning pause must be a boolean.')
+                self.workbench.settings['learningPaused'] = request['paused']
+            elif action == 'retention':
+                if type(request['days']) is not int or request['days'] not in (7, 30, 90):
+                    raise ValueError('Choose 7, 30, or 90 days.')
+                self.workbench.settings['retentionDays'] = request['days']
+                self.prune_history(now)
+            elif action == 'finding':
+                if not isinstance(request['key'], str) or len(request['key']) != 64:
+                    raise ValueError('Invalid finding key.')
+                finding = next((f for f in self.view()['findings'] if f['reviewKey'] == request['key']), None)
+                if not finding:
+                    raise ValueError('The finding changed or is no longer current. Refresh first.')
+                self.workbench.mark(finding, request['status'], now)
+            elif action == 'reminder':
+                if type(request['days']) is not int or request['days'] not in (0, 1, 7, 30):
+                    raise ValueError('Choose off, daily, weekly, or every 30 days.')
+                days = request['days']
+                self.workbench.reminder = {'days': days, 'dueAt': (now + dt.timedelta(days=days)).isoformat() if days else None}
+            elif action == 'reminder-done':
+                days = self.workbench.reminder['days']
+                if not days:
+                    raise ValueError('Enable a reminder first.')
+                self.workbench.reminder['dueAt'] = (now + dt.timedelta(days=days)).isoformat()
+            else:
+                if request['confirmed'] is not True:
+                    raise ValueError('Explicit confirmation is required for baseline changes.')
+                if any(r.get('status') == 'running' for r in self.state['aiReviews'] + self.state['aiChecks']):
+                    raise ValueError('Wait for the AI request to finish before changing the baseline.')
+                if action == 'baseline-reset':
+                    save_json(self.data_dir / 'model-backup.json', self.model.state)
+                    self.model = BehaviorModel()
+                else:
+                    backup = read_json(self.data_dir / 'model-backup.json', None)
+                    if (not isinstance(backup, dict) or type(backup.get('samples')) is not int
+                            or not isinstance(backup.get('processes'), dict) or not isinstance(backup.get('gatewayMacs'), dict)):
+                        raise ValueError('No readable local baseline backup is available.')
+                    self.model = BehaviorModel(backup)
+                save_json(self.data_dir / 'model.json', self.model.state)
+                # A reset/restoration is not a clean baseline or an AI consent grant.
+                self.ai_preview = None
+                self.state['findings'] = assess(self.state['snapshot'], self.model, learn=False) if self.state['snapshot'] else []
+                for review in self.state['aiReviews']:
+                    review['snapshotFingerprint'] = None
+                save_json(self.data_dir / 'ai-reviews.json', self.state['aiReviews'])
+            self.workbench.prune(now)
+            save_json(self.data_dir / 'workbench.json', self.workbench.persisted())
+            return {'status': 'saved', 'action': action}
+
+    def prune_history(self, now):
+        cutoff = now - dt.timedelta(days=self.workbench.settings['retentionDays'])
+        for name, field, filename in [('history', 'time', 'history.json'), ('alertHistory', 'observedAt', 'alert-history.json')]:
+            self.state[name] = [v for v in self.state[name] if parsed(v.get(field)) and parsed(v[field]) >= cutoff]
+            save_json(self.data_dir / filename, self.state[name])
 
     def assistant_prompt(self):
         with self.lock:
@@ -232,10 +314,11 @@ class Agent:
     def preview_ai_review(self, provider):
         if provider not in (*PROVIDERS, *self.ai_profiles):
             raise ValueError('Unknown AI provider.')
-        packet, aliases = self.ai_evidence()
         with self.lock:
+            packet, aliases = self.ai_evidence()
             token = secrets.token_urlsafe(24)
-            self.ai_preview = {'provider': provider, 'token': token, 'created': time.monotonic(), 'packet': packet, 'aliases': aliases}
+            self.ai_preview = {'provider': provider, 'token': token, 'created': time.monotonic(), 'packet': packet, 'aliases': aliases,
+                               'snapshotFingerprint': fingerprint(self.state['snapshot'])}
         return {'evidence': packet, 'previewToken': token}
 
     def launch_ai_review(self, provider='ollama', model='', allow_cloud=False, preview_token=''):
@@ -262,15 +345,19 @@ class Agent:
             try:
                 if frozen_preview:
                     packet, aliases = frozen_preview['packet'], frozen_preview['aliases']
+                    reviewed_fingerprint = frozen_preview['snapshotFingerprint']
                 else:
                     self.collect()
-                    packet, aliases = self.ai_evidence()
+                    with self.lock:
+                        packet, aliases = self.ai_evidence()
+                        reviewed_fingerprint = fingerprint(self.state['snapshot'])
                 options = {'allow_cloud': allow_cloud}
                 if self.ai_profiles: options['profiles'] = self.ai_profiles
                 if provider == 'gemini': options['gemini_home'] = self.data_dir / 'gemini-profile'
                 result = run_review(provider, model, packet, **options)
                 with self.lock:
-                    review.update(status='completed', result=result, aliases=aliases, coverage=packet['coverage'], finishedAt=utcnow())
+                    review.update(status='completed', result=result, aliases=aliases, coverage=packet['coverage'], finishedAt=utcnow(),
+                                  snapshotFingerprint=reviewed_fingerprint)
             except ProviderError as exc:
                 logging.exception('AI provider contract failed')
                 with self.lock:
@@ -330,10 +417,11 @@ class Agent:
             return
         with self.lock:
             self.state['collecting'] = True
+        started = time.monotonic()
         try:
             snapshot = self.backend.collect()
             with self.lock:
-                findings = assess(snapshot, self.model) + self.scanner_findings()
+                findings = assess(snapshot, self.model, learn=not self.workbench.settings['learningPaused']) + self.scanner_findings()
                 old = {(f['id'], f['detail']) for f in self.state['findings']}
                 for finding in findings:
                     if (finding['id'], finding['detail']) not in old:
@@ -343,6 +431,9 @@ class Agent:
                 self.state['history'].append({'time': utcnow(), 'processes': len(rows(snapshot.get('processes'))),
                                               'connections': len(rows(snapshot.get('connections'))), 'findings': len(findings)})
                 self.state['history'] = self.state['history'][-720:]
+                self.workbench.observe(snapshot, (time.monotonic() - started) * 1000)
+                self.prune_history(dt.datetime.now(dt.timezone.utc))
+                save_json(self.data_dir / 'workbench.json', self.workbench.persisted())
                 save_json(self.data_dir / 'model.json', self.model.state)
                 save_json(self.data_dir / 'history.json', self.state['history'])
                 save_json(self.data_dir / 'alert-history.json', self.state['alertHistory'])
@@ -351,6 +442,8 @@ class Agent:
             logging.exception('Collection failed')
             with self.lock:
                 self.state['lastError'] = str(exc)
+                self.workbench.observe(None, (time.monotonic() - started) * 1000, success=False)
+                save_json(self.data_dir / 'workbench.json', self.workbench.persisted())
         finally:
             with self.lock:
                 self.state['collecting'] = False
@@ -521,12 +614,14 @@ class Handler(BaseHTTPRequestHandler):
             self.respond(200, self.server.agent.view())
         elif path == '/api/report':
             self.respond(200, self.server.agent.report())
+        elif path == '/api/report.md':
+            self.respond(200, markdown_report(self.server.agent.report()).encode('utf-8'), 'text/markdown; charset=utf-8')
         elif path == '/api/assistant':
             self.respond(200, self.server.agent.assistant_prompt())
         elif path == '/api/ai/options':
             self.respond(200, provider_options(self.server.agent.ai_profiles) if self.server.agent.ai_profiles else provider_options())
-        elif path in ('/', '/app.js', '/style.css'):
-            filename, mime = {'/': ('index.html', 'text/html; charset=utf-8'), '/app.js': ('app.js', 'text/javascript; charset=utf-8'), '/style.css': ('style.css', 'text/css; charset=utf-8')}[path]
+        elif path in ('/', '/app.js', '/workbench.js', '/style.css'):
+            filename, mime = {'/': ('index.html', 'text/html; charset=utf-8'), '/app.js': ('app.js', 'text/javascript; charset=utf-8'), '/workbench.js': ('workbench.js', 'text/javascript; charset=utf-8'), '/style.css': ('style.css', 'text/css; charset=utf-8')}[path]
             self.respond(200, (ROOT / 'static' / filename).read_bytes(), mime)
         elif path == '/help/ai':
             self.respond(200, (ROOT / 'docs' / 'AI_REVIEW.md').read_bytes(), 'text/plain; charset=utf-8')
@@ -549,6 +644,8 @@ class Handler(BaseHTTPRequestHandler):
             elif path == '/api/refresh':
                 self.server.agent.wakeup.set()
                 self.respond(202, {'status': 'queued'})
+            elif path == '/api/control':
+                self.respond(200, self.server.agent.control(body))
             elif path == '/api/ai/review':
                 self.respond(202, self.server.agent.launch_ai_review(body.get('provider', 'ollama'), body.get('model', ''), body.get('allowCloud', False), body.get('previewToken', '')))
             elif path == '/api/ai/preview':

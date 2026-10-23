@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.0 — monitoring workspace beta
+
+- Add fifteen documented monitoring and local-control improvements; see [feature guide](docs/FEATURES_0_6.md).
+- Add advisory review expiry and evidence-bound keys without changing protection status, counts or critical finding visibility.
+- Add coverage/freshness, collection timing, protection transitions, connection filters/deltas, listeners and native-job timing.
+- Add explicit reminder-only scheduling, manual learning pause, reversible baseline restart, scoped retention and Markdown summary exports.
+- Bind AI advisories to exact local snapshot fingerprints; stale/changed evidence stays historical.
+- Keep authenticated loopback and strict Origin validation for all new controls. No automatic scan, cloud request, remediation or website deployment.
+
 ## 0.5.1
 
 - Add an explicit one-command source setup helper, offline/manual install instructions, and platform-specific checksum steps.
@@ -45,4 +54,4 @@
 - Added native executable tooling, synthetic smoke checks, checksums, and manual-only build workflows.
 - Added MIT licensing, contributor/security guidance, platform limits, a pain-point roadmap, and draft project content.
 
-Existing running monitors are not automatically upgraded or replaced. Native macOS, ARM64, physical Linux Wi-Fi validation, signed installers, and scanner efficacy evaluation remain release gates. No release, source push, or deployment has occurred.
+Existing running monitors are not automatically upgraded or replaced. Native macOS, ARM64, physical Linux Wi-Fi validation, signed installers, and scanner efficacy evaluation remain release gates. The 0.5.1 desktop beta was published previously. This release retains the same platform and signing limits; no website deployment is part of release tooling.

@@ -85,6 +85,8 @@ The read-only collector samples protections, processes, TCP connections, startup
 
 Structured generation limits each reason to a supported evidence pair. Validation independently rejects invented references, unsupported reasons, false indicators, extra fields, executable instructions, inconsistent assessments, and excessive findings. The dashboard renders static explanations with locally retained aliases. Model output cannot become a command, deletion, quarantine, setting change, trust decision, or clean-computer certification. A valid signature does not prove safety; an unsigned application does not prove malware.
 
+Each completed review is bound to an exact private snapshot fingerprint. The fingerprint is local metadata and is never sent to a provider. A new observation, failed collection, stale/unknown freshness or baseline restart/restore makes the prior review historical; it remains in the journal but cannot represent current evidence. A fresh result does not trigger an automatic follow-up AI request. Review and snooze controls affect only the advisory queue, never malware protection or status totals.
+
 AI review supports investigation. Microsoft Defender or another validated engine remains responsible for malware scanning and blocking. Sampled TCP activity cannot detect every infection, short-lived process, UDP activity, unsafe router configuration, or malware on another Wi-Fi device. Missing visibility and failed inference remain explicit.
 
 ## Privacy and contribution

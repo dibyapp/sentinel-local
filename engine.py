@@ -62,7 +62,7 @@ class BehaviorModel:
     def __init__(self, state=None):
         self.state = state or {'samples': 0, 'processes': {}, 'gatewayMacs': {}}
 
-    def inspect(self, snapshot):
+    def inspect(self, snapshot, learn=True):
         alerts = []
         if snapshot.get('processes') is None or snapshot.get('connections') is None:
             # Missing sensors are not observations of zero activity. Do not
@@ -113,6 +113,8 @@ class BehaviorModel:
                                'detail': ' '.join(reasons), 'score': min(100, score), 'source': 'Local behavior model'})
                 # Do not absorb flagged behavior into a trusted baseline automatically.
                 continue
+            if not learn:
+                continue
             record['n'] += 1
             delta = count - record['mean']
             record['mean'] += delta / record['n']
@@ -121,11 +123,12 @@ class BehaviorModel:
                 record['ports'][port] = record['ports'].get(port, 0) + 1
             if len(self.state['processes']) < 5000 or key in self.state['processes']:
                 self.state['processes'][key] = record
-        self.state['samples'] += 1
+        if learn:
+            self.state['samples'] += 1
         return alerts
 
 
-def assess(snapshot, model):
+def assess(snapshot, model, learn=True):
     findings = []
     def add(key, severity, title, detail):
         findings.append({'id': key, 'severity': severity, 'title': title, 'detail': detail, 'source': 'Security checks'})
@@ -169,7 +172,7 @@ def assess(snapshot, model):
                 mac = neighbor['LinkLayerAddress']
                 if known and known != mac:
                     add('gateway-mac:' + baseline_key, 'warning', 'Gateway hardware address changed', f'{gateway}: {known} → {mac}. Router replacement or mesh roaming can cause this; verify your router.')
-                elif not known:
+                elif not known and learn:
                     model.state['gatewayMacs'][baseline_key] = mac
-    findings.extend(model.inspect(snapshot))
+    findings.extend(model.inspect(snapshot, learn=learn))
     return findings

@@ -10,7 +10,7 @@ Sentinel Local is an **open-source endpoint security monitor** with local Ollama
 
 **Desktop beta:** Microsoft Defender and separately configured OS protections handle malware blocking. Sentinel provides observations and advisory analysis. It is not an independently certified antivirus engine. Windows and Linux x64 have local validation; macOS and ARM64 need native validation.
 
-[Get started](docs/INSTALLATION.md) · [Download the beta](https://github.com/dibyapp/sentinel-local/releases/tag/v0.5.1-beta.1) · [AI tools](docs/AI_REVIEW.md) · [Privacy](SECURITY.md) · [Contribute](CONTRIBUTING.md)
+[Get started](docs/INSTALLATION.md) · [Download the beta](https://github.com/dibyapp/sentinel-local/releases/tag/v0.6.0-beta.1) · [AI tools](docs/AI_REVIEW.md) · [Privacy](SECURITY.md) · [Contribute](CONTRIBUTING.md)
 
 ![Fictional Sentinel dashboard showing protection status and three setup steps](docs/screenshots/overview.jpg)
 
@@ -43,6 +43,10 @@ python3 tools/setup.py --open
 ```
 
 Use Python 3.11+; some Linux distributions need their Python venv package first. Later, run `sh start-sentinel.sh`. macOS source support is experimental pending native validation. [Manual/offline setup, updates, and stopping](docs/INSTALLATION.md).
+
+## New in 0.6
+
+Fifteen improvements make daily review clearer: finding search/review/snooze, coverage and performance views, protection and connection changes, listener review, reminders, snapshot-bound AI results, reversible baseline controls, retention and readable private-summary exports. [Feature guide and limits](docs/FEATURES_0_6.md).
 
 ## What it helps you do
 

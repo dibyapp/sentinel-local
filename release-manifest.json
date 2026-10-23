@@ -24,6 +24,7 @@
     "backends.py",
     "docs/AI_REVIEW.md",
     "docs/ARCHITECTURE.md",
+    "docs/FEATURES_0_6.md",
     "docs/GETTING_STARTED.md",
     "docs/INSTALLATION.md",
     "docs/LAUNCH_PLAN.md",
@@ -58,6 +59,7 @@
     "static/app.js",
     "static/index.html",
     "static/style.css",
+    "static/workbench.js",
     "tests/test_ai_integrations.py",
     "tests/test_ai_review.py",
     "tests/test_guidance.py",
@@ -65,6 +67,8 @@
     "tests/test_portability_privacy.py",
     "tests/test_product.py",
     "tests/test_security.py",
+    "tests/test_workbench.py",
+    "tests/test_workbench_ui.cjs",
     "tools/build.py",
     "tools/build_portable.py",
     "tools/check_public_docs.py",
@@ -72,6 +76,7 @@
     "tools/prepare_source.py",
     "tools/release_guard.py",
     "tools/setup.py",
-    "version.py"
+    "version.py",
+    "workbench.py"
   ]
 }

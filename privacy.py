@@ -3,6 +3,8 @@ from collections import Counter
 import os
 from pathlib import Path
 import platform
+import datetime as dt
+from workbench import freshness
 
 from version import __version__
 
@@ -35,7 +37,8 @@ def public_report(state, model):
     return {'schema': 'sentinel-sharing-safe-v1', 'version': __version__,
             'platform': system if system in ('Windows', 'Linux', 'Darwin') else 'unknown',
             'collection': {'hasSnapshot': bool(snapshot), 'failedSourceCount': len(snapshot.get('errors') or []),
-                           'hasCollectionError': bool(state.get('lastError'))},
+                           'hasCollectionError': bool(state.get('lastError')),
+                           'freshness': 'unverified' if state.get('lastError') else freshness(snapshot.get('collectedAt'), dt.datetime.now(dt.timezone.utc))['status']},
             'protection': {key: defender.get(key) if type(defender.get(key)) is bool else None for key in allowed_flags},
             'counts': {name: count(name) for name in ('processes', 'connections', 'listeners', 'startup', 'threats')},
             'threatStatus': {'active': sum(t.get('IsActive') is True for t in threats),

@@ -17,7 +17,7 @@ def run():
                 'processes': [], 'connections': [], 'errors': [], 'firewall': [{'Name': 'Test', 'Enabled': True}],
                 'wifiRaw': 'Name : test-wifi\nState : connected\nSSID : FICTIONAL-NETWORK',
                 'addresses': [{'interface': 'test-wifi', 'index': 1, 'addresses': [{'IPAddress': '192.168.50.2', 'PrefixLength': 24}], 'gateways': ['192.168.50.1']}]}
-    checks['bundled_assets'] = all((ROOT / name).is_file() for name in ('static/index.html', 'static/app.js', 'static/style.css', 'scripts/collect.ps1', 'scripts/action.ps1', 'scripts/verify-signatures.ps1', 'docs/AI_REVIEW.md'))
+    checks['bundled_assets'] = all((ROOT / name).is_file() for name in ('static/index.html', 'static/app.js', 'static/workbench.js', 'static/style.css', 'scripts/collect.ps1', 'scripts/action.ps1', 'scripts/verify-signatures.ps1', 'docs/AI_REVIEW.md'))
     checks['healthy_fixture'] = not assess(snapshot, BehaviorModel())
     unsafe = dict(snapshot, defender={'RealTimeProtectionEnabled': False})
     checks['disabled_protection_detected'] = any(f['severity'] == 'critical' for f in assess(unsafe, BehaviorModel()))
@@ -30,6 +30,16 @@ def run():
         handoff = agent.assistant_prompt()
         checks['assistant_handoff_redaction'] = not handoff['connected'] and 'FAKE-PRIVATE-CANARY' not in handoff['prompt'] and '/fictional/private/location' not in handoff['prompt']
         checks['guided_status_available'] = bool(agent.view()['guide']['steps'])
+        from workbench import markdown_report
+        checks['readable_summary_redacted'] = 'FAKE-PRIVATE-CANARY' not in markdown_report(agent.report())
+        before = agent.model.state['samples']
+        agent.control({'action': 'learning', 'paused': True})
+        agent.collect()
+        checks['pause_keeps_samples'] = agent.model.state['samples'] == before
+        agent.control({'action': 'baseline-reset', 'confirmed': True})
+        agent.control({'action': 'baseline-restore', 'confirmed': True})
+        checks['baseline_restore'] = agent.model.state['samples'] == before
+        checks['workbench_available'] = len(agent.view()['workbench']['sensors']) == 6
         from ai_evidence import build_evidence, validate_result
         packet, _ = build_evidence(agent.state, agent.model)
         checks['direct_ai_redaction'] = 'FAKE-PRIVATE-CANARY' not in json.dumps(packet) and '/fictional/private/location' not in json.dumps(packet)

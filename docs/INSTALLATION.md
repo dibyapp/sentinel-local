@@ -1,15 +1,15 @@
 # Install Sentinel Local: Windows, Linux, and macOS
 
-Choose a native desktop beta executable for the simplest start, or a reviewed source checkout for development. Core monitoring needs no AI account. Windows/Linux x64 beta packages are available from the [v0.5.1 beta release](https://github.com/dibyapp/sentinel-local/releases/tag/v0.5.1-beta.1). macOS and ARM64 packages remain pending native validation. Development binaries are unsigned; signing remains a consumer-release gate.
+Choose a native desktop beta executable for the simplest start, or a reviewed source checkout for development. Core monitoring needs no AI account. Windows/Linux x64 beta packages are available from the [v0.5.1 beta release](https://github.com/dibyapp/sentinel-local/releases/tag/v0.6.0-beta.1). macOS and ARM64 packages remain pending native validation. Development binaries are unsigned; signing remains a consumer-release gate.
 
 ## Windows x64 executable
 
-1. Download `sentinel-local-0.5.1-windows-x64.exe` and its `.sha256` file from that release, keeping them in the same folder.
+1. Download `sentinel-local-0.6.0-windows-x64.exe` and its `.sha256` file from that release, keeping them in the same folder.
 2. In that folder, verify the file's SHA-256:
 
 ```powershell
-$expectedDigest = (Get-Content -LiteralPath 'sentinel-local-0.5.1-windows-x64.exe.sha256').Split()[0]
-$actualDigest = (Get-FileHash -LiteralPath 'sentinel-local-0.5.1-windows-x64.exe' -Algorithm SHA256).Hash
+$expectedDigest = (Get-Content -LiteralPath 'sentinel-local-0.6.0-windows-x64.exe.sha256').Split()[0]
+$actualDigest = (Get-FileHash -LiteralPath 'sentinel-local-0.6.0-windows-x64.exe' -Algorithm SHA256).Hash
 if ($actualDigest -ne $expectedDigest) { throw 'Checksum mismatch: do not run this file.' }
 ```
 
@@ -22,9 +22,9 @@ A checksum verifies agreement with a downloaded reference; it does not authentic
 On a compatible glibc-based x64 distribution, download the Linux artifact and checksum, then run in their folder:
 
 ```sh
-sha256sum --check sentinel-local-0.5.1-linux-x64.sha256 &&
-chmod u+x sentinel-local-0.5.1-linux-x64 &&
-./sentinel-local-0.5.1-linux-x64
+sha256sum --check sentinel-local-0.6.0-linux-x64.sha256 &&
+chmod u+x sentinel-local-0.6.0-linux-x64 &&
+./sentinel-local-0.6.0-linux-x64
 ```
 
 Only run the final command after checksum verification passes. The build uses an Ubuntu 24.04 baseline; older glibc and musl distributions may need source execution. WSL validation does not prove physical Linux Wi-Fi behavior. Optional OS utilities or permissions may be unavailable; the dashboard shows that limitation.
@@ -74,7 +74,7 @@ For offline use, obtain the exact platform-appropriate pinned psutil wheel from 
 The `.pyz` works on supported desktop Python environments with Python 3.11+ and psutil 7.2.2 already installed:
 
 ```text
-python sentinel-local-0.5.1-portable.pyz --open
+python sentinel-local-0.6.0-portable.pyz --open
 ```
 
 It is a source launcher, not a bundled universal binary. It cannot provide Android/iOS support or replace native permission validation.

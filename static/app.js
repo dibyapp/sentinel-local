@@ -50,6 +50,7 @@ function renderGuide(data, guide, capabilities) {
   for (const review of list(data.aiReviews).slice(-3).reverse()) {
     const item = node('article', undefined, 'job'); const response = review.result?.result;
     item.append(node('strong', `${review.provider} · ${review.status}`));
+    if (review.status === 'completed') item.append(node('small', review.evidenceCurrent ? 'Evidence matches the current snapshot.' : 'Historical AI review: evidence no longer matches current observations. Run a new explicit review if needed.'));
     if (review.error) item.append(node('p', review.error));
     if (response) {
       item.append(node('p', response.assessment === 'review' ? 'Evidence-backed advisory findings to review' : response.assessment === 'insufficient_evidence' ? 'Insufficient evidence for an assessment' : 'AI proposed no additional signals in this sample'));
@@ -130,7 +131,10 @@ function render(data) {
   if (errors.length) for (const error of errors) coverage.append(node('p', error, 'warning')); else coverage.append(node('p', 'All configured data sources returned successfully.', 'good'));
   for (const note of list(s.coverageNotes)) coverage.append(node('p', note));
   if (capabilities.connectionCoverage) coverage.append(node('p', capabilities.connectionCoverage));
-  if (data.model.paused) coverage.append(node('p', 'Behavior learning is paused because process or TCP observations are unavailable. Missing data is never learned as zero activity.', 'warning'));
+  if (data.model.manualPause) coverage.append(node('p', 'You paused baseline learning. Existing checks continue.', 'warning'));
+  if (data.model.paused && !data.model.manualPause) coverage.append(node('p', 'Behavior learning is paused because process or TCP observations are unavailable. Missing data is never learned as zero activity.', 'warning'));
+  $('sampling-label').textContent = `SAMPLED AFTER EACH ${data.interval}-SECOND WAIT`;
+  SentinelWorkbench.render(data, {api, node, refresh, token});
 }
 async function refresh() { try { render(await api('/api/status')); } catch (e) { notice(e.message); $('live-state').textContent = 'Disconnected'; if (!token) notice('Open Sentinel with its launcher or --open to reconnect. The dashboard needs its local access link.'); } }
 document.querySelectorAll('[data-action]').forEach(button => button.addEventListener('click', async () => { button.disabled = true; try { await api('/api/action', { action: button.dataset.action }); await refresh(); } catch (e) { notice(e.message); button.disabled = false; } }));
@@ -178,4 +182,5 @@ $('run-ai').addEventListener('click', async () => {
   try { await api('/api/ai/review', {provider, model: cloud ? '' : $('ai-model').value, allowCloud: cloud && $('allow-cloud-ai').checked, previewToken: aiPreviewToken}); evidencePreviewed = false; aiPreviewToken = ''; $('allow-cloud-ai').checked = false; $('direct-ai-status').textContent = 'AI review started. No malware scan, file removal, or security-setting change was requested.'; await refresh(); }
   catch (e) { $('direct-ai-status').textContent = e.message; $('run-ai').disabled = false; }
 });
+SentinelWorkbench.init({api, node, refresh, token});
 refresh(); setInterval(refresh, 5000);
