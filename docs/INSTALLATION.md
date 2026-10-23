@@ -1,6 +1,6 @@
 # Install Sentinel Local: Windows, Linux, and macOS
 
-Choose a native desktop beta executable for the simplest start, or a reviewed source checkout for development. Core monitoring needs no AI account. Windows/Linux x64 beta packages are available from the [v0.5.1 beta release](https://github.com/dibyapp/sentinel-local/releases/tag/v0.6.0-beta.1). macOS and ARM64 packages remain pending native validation. Development binaries are unsigned; signing remains a consumer-release gate.
+Choose a native desktop beta executable for the simplest start, or a reviewed source checkout for development. Core monitoring needs no AI account. Windows/Linux x64 beta packages are available from the [v0.6.0 beta release](https://github.com/dibyapp/sentinel-local/releases/tag/v0.6.0-beta.1). macOS and ARM64 packages remain pending physical-device validation. Development binaries are unsigned; signing remains a consumer-release gate.
 
 ## Windows x64 executable
 
